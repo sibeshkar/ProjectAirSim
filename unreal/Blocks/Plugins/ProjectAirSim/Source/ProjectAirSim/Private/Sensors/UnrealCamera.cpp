@@ -29,6 +29,7 @@
 #include "UnrealHelpers.h"
 #include "UnrealLogger.h"
 #include "UnrealScene.h"
+#include "UnrealTransforms.h"
 #include "core_sim/clock.hpp"
 #include "core_sim/math_utils.hpp"
 #include "core_sim/message/image_message.hpp"

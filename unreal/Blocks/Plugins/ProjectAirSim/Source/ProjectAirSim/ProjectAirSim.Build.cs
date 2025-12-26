@@ -39,7 +39,8 @@ public class ProjectAirSim : ModuleRules
 
         PrivateIncludePaths.AddRange(
             new string[] {
-                EngineDirectory + "/Source/Runtime/Renderer/Private"
+                EngineDirectory + "/Source/Runtime/Renderer/Private",
+                EngineDirectory + "/Source/Runtime/Renderer/Internal"  // UE 5.5+ moved some headers here
             }
         );
 

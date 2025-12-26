@@ -52,8 +52,11 @@ class FLidarIntensityPS : public FLidarIntensityShader {
       : FLidarIntensityShader(Initializer) {}
 
   void SetParameters(FRHICommandList& RHICmdList, const FSceneView& View) {
+    // UE 5.7 API: Use FRHIBatchedShaderParameters instead of direct shader parameter setting
+    FRHIBatchedShaderParameters& BatchedParameters = RHICmdList.GetScratchShaderParameters();
     FGlobalShader::SetParameters<FViewUniformShaderParameters>(
-        RHICmdList, RHICmdList.GetBoundPixelShader(), View.ViewUniformBuffer);
+        BatchedParameters, View.ViewUniformBuffer);
+    RHICmdList.SetBatchedShaderParameters(RHICmdList.GetBoundPixelShader(), BatchedParameters);
   }
 
   static void ModifyCompilationEnvironment(
@@ -74,7 +77,10 @@ class FLidarIntensityVS : public FLidarIntensityShader {
       : FLidarIntensityShader(Initializer) {}
 
   void SetParameters(FRHICommandList& RHICmdList, const FSceneView& View) {
+    // UE 5.7 API: Use FRHIBatchedShaderParameters instead of direct shader parameter setting
+    FRHIBatchedShaderParameters& BatchedParameters = RHICmdList.GetScratchShaderParameters();
     FGlobalShader::SetParameters<FViewUniformShaderParameters>(
-        RHICmdList, RHICmdList.GetBoundVertexShader(), View.ViewUniformBuffer);
+        BatchedParameters, View.ViewUniformBuffer);
+    RHICmdList.SetBatchedShaderParameters(RHICmdList.GetBoundVertexShader(), BatchedParameters);
   }
 };

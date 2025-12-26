@@ -5,6 +5,7 @@
 
 #include "UnrealScene.h"
 
+#include "World/WorldSimApi.h"  // Full definition needed for std::unique_ptr<WorldSimApi>
 #include "CineCameraActor.h"
 #include "Components/SkinnedMeshComponent.h"
 #include "Components/StaticMeshComponent.h"
@@ -25,6 +26,9 @@
 #include "core_sim/clock.hpp"
 
 namespace projectairsim = microsoft::projectairsim;
+
+// Destructor must be defined in .cpp where WorldSimApi is complete (for unique_ptr)
+AUnrealScene::~AUnrealScene() = default;
 
 AUnrealScene::AUnrealScene(const FObjectInitializer& ObjectInitialize)
     : AActor(ObjectInitialize) {

@@ -4,6 +4,7 @@
 #include "SceneView.h"
 #include "RenderGraph.h"
 #include "Runtime/Renderer/Private/PostProcess/PostProcessing.h"
+#include "PostProcess/SceneFilterRendering.h"
 #include "CommonRenderResources.h"
 #include "Containers/DynamicRHIResourceArray.h"
 #include "Engine/World.h"
@@ -288,12 +289,12 @@ void FLidarIntensitySceneViewExtension::PrePostProcessPass_RenderThread(
         RDG_EVENT_NAME("FCopyBufferToCPUPass"), CopyPassParameters,
         ERDGPassFlags::Readback,
         [this, &InitialData, PointCloudBufferRDG, BufferSize](FRHICommandList& RHICmdList) {
-          InitialData = (float*)RHILockBuffer(PointCloudBufferRDG->GetRHI(), 0,
+          InitialData = (float*)RHICmdList.LockBuffer(PointCloudBufferRDG->GetRHI(), 0,
                                               BufferSize, RLM_ReadOnly);
 
           FMemory::Memcpy(LidarPointCloudData.data(), InitialData, BufferSize);
 
-          RHIUnlockBuffer(PointCloudBufferRDG->GetRHI());
+          RHICmdList.UnlockBuffer(PointCloudBufferRDG->GetRHI());
         });
 }
 

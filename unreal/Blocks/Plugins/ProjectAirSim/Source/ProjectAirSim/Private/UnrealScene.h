@@ -14,12 +14,14 @@
 #include "Robot/UnrealRobot.h"
 #include "Sensors/UnrealViewportCamera.h"
 #include "World/TimeofDay.hpp"
-#include "World/WorldSimApi.h"
 #include "core_sim/clock.hpp"
 #include "core_sim/earth_utils.hpp"
 #include "core_sim/scene.hpp"
 #include "json.hpp"
 #include "unreal_physics.hpp"
+
+// Forward declaration to break circular dependency with WorldSimApi.h
+class WorldSimApi;
 
 // comment so that generated.h is always the last include file with clang-format
 #include "UnrealScene.generated.h"
@@ -30,6 +32,7 @@ class AUnrealScene : public AActor {
 
  public:
   explicit AUnrealScene(const FObjectInitializer& ObjectInitialize);
+  ~AUnrealScene();  // Required for unique_ptr<WorldSimApi> with forward declaration
 
   void LoadUnrealScene(
       UWorld* World, microsoft::projectairsim::Scene& Scene,
