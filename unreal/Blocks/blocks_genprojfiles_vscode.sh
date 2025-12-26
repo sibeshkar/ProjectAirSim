@@ -11,9 +11,19 @@ then
 else
   # Generate VS Code UE project files (overwrites .vscode\settings.json)
   echo Generating VS Code project files with environment variable UE_ROOT=$UE_ROOT
-  SCRIPTDIR=$(dirname "$(readlink -f "$0")")
-  cd $SCRIPTDIR
-  $UE_ROOT/Engine/Build/BatchFiles/Linux/Build.sh -projectfiles -vscode -project="$SCRIPTDIR/Blocks.uproject" -game
+  
+  # Get script directory (compatible with both Linux and macOS)
+  SCRIPTDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+  cd "$SCRIPTDIR"
+  
+  # Detect platform and use appropriate build script
+  if [[ "$OSTYPE" == "darwin"* ]]; then
+    # macOS
+    "$UE_ROOT/Engine/Build/BatchFiles/Mac/GenerateProjectFiles.sh" -projectfiles -vscode -project="$SCRIPTDIR/Blocks.uproject" -game
+  else
+    # Linux
+    "$UE_ROOT/Engine/Build/BatchFiles/Linux/Build.sh" -projectfiles -vscode -project="$SCRIPTDIR/Blocks.uproject" -game
+  fi
 
   # Insert projectairsim project folder into UE-generated Block.code-workspace
   echo "{" > AirSimBlocks.code-workspace
@@ -26,6 +36,14 @@ else
   mv AirSimBlocks.code-workspace Blocks.code-workspace
 
   # Fix UE's generated game target binary names from UnrealGame to Blocks in launch.json
-  sed -i 's/UnrealGame-/Blocks-/g' .vscode/launch.json
-  sed -i 's/UnrealGame"/Blocks"/g' .vscode/launch.json
+  # Use platform-appropriate sed syntax
+  if [[ "$OSTYPE" == "darwin"* ]]; then
+    # macOS BSD sed requires '' after -i
+    sed -i '' 's/UnrealGame-/Blocks-/g' .vscode/launch.json
+    sed -i '' 's/UnrealGame"/Blocks"/g' .vscode/launch.json
+  else
+    # Linux GNU sed
+    sed -i 's/UnrealGame-/Blocks-/g' .vscode/launch.json
+    sed -i 's/UnrealGame"/Blocks"/g' .vscode/launch.json
+  fi
 fi
