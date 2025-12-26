@@ -365,7 +365,7 @@ void AUnrealScene::BeginPlay() {
 
   // Initialize WorldSimAPI, Weather, and TimeOfDay
   time_of_day.reset(new TimeOfDay(home_geo_point));
-  world_api.reset(new WorldSimApi(unreal_world, time_of_day, sim_scene));
+  world_api = MakeShareable(new WorldSimApi(unreal_world, time_of_day, sim_scene));
 
   UWeatherLib::initWeather(unreal_world, unreal_actors);
 

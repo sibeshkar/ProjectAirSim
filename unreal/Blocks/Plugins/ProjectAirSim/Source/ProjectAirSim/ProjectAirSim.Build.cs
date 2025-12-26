@@ -220,6 +220,7 @@ public class ProjectAirSim : ModuleRules
                 new string[] {
                     "c++",
                     "pthread",
+                    "z",  // zlib - required by assimp for compression
                 }
             );
 
