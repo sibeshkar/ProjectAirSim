@@ -16,6 +16,7 @@
 #include "ProjectAirSim.h"
 #include "UnrealLogger.h"
 #include "UnrealScene.h"
+#include "Constant.h"
 #include "simserver.hpp"
 
 #ifdef ENABLE_CESIUM

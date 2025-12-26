@@ -28,6 +28,7 @@
 #include "Kismet/KismetMathLibrary.h"
 #include "Kismet/KismetStringLibrary.h"
 #include "LandscapeProxy.h"
+#include "ProceduralMeshComponent.h"
 #include "Runtime/Engine/Classes/Engine/StaticMesh.h"
 #include "UnrealLogger.h"
 #include "core_sim/transforms/transform_utils.hpp"

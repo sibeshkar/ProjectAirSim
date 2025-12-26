@@ -11,7 +11,8 @@ public class ProjectAirSim : ModuleRules
 {
     public ProjectAirSim(ReadOnlyTargetRules Target) : base(Target)
     {
-        CppStandard = CppStandardVersion.Cpp17;
+        CppStandard = CppStandardVersion.Cpp20;
+        bValidateFormatStrings = false;  // Disable UE 5.7 format string validation for legacy Printf calls
         PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
         PrivatePCHHeaderFile = "Public/ProjectAirSim.h";
 
@@ -175,8 +176,64 @@ public class ProjectAirSim : ModuleRules
                 RuntimeDependencies.Add("$(BinaryOutputDir)/" + fileName, PluginDirectory + "/SimLibs/shared_libs/" + fileName);
             }
         }
+        else if (Target.Platform == UnrealTargetPlatform.Mac)
+        {
+            // macOS platform
+            List<string> liststrLibraries = new List<string> {
+                    PluginDirectory + "/SimLibs/core_sim/" + buildType + "/libcore_sim.a",
+                    PluginDirectory + "/SimLibs/simserver/" + buildType + "/libsimserver.a",
+                    PluginDirectory + "/SimLibs/physics/" + buildType + "/libphysics.a",
+                    PluginDirectory + "/SimLibs/multirotor_api/" + buildType + "/libmultirotor_api.a",
+                    PluginDirectory + "/SimLibs/rover_api/" + buildType + "/librover_api.a",
+                    PluginDirectory + "/SimLibs/rendering_scene/" + buildType + "/librendering_scene.a",
+                    PluginDirectory + "/SimLibs/mavlinkcom/" + buildType + "/libmavlinkcom.a",
+                    PluginDirectory + "/SimLibs/nng/" + buildType + "/libnng.a",
+                    PluginDirectory + "/SimLibs/assimp/" + buildType + "/libassimp.a",
+                };
+
+            if (buildType == "Debug")
+                liststrLibraries.Add(PluginDirectory + "/SimLibs/lvmon/" + buildType + "/liblvmon.a");
+
+            // Add ONNX Runtime dylib for macOS
+            var onnxDylib = PluginDirectory + "/SimLibs/shared_libs/libonnxruntime.dylib";
+            if (File.Exists(onnxDylib))
+            {
+                liststrLibraries.Add(onnxDylib);
+            }
+            else
+            {
+                // Try versioned dylib
+                var onnx_files = Directory.GetFiles(PluginDirectory + "/SimLibs/shared_libs", "libonnxruntime*.dylib");
+                foreach (var file in onnx_files)
+                {
+                    liststrLibraries.Add(file);
+                    var fileName = Path.GetFileName(file);
+                    RuntimeDependencies.Add("$(BinaryOutputDir)/" + fileName, file);
+                }
+            }
+
+            PublicAdditionalLibraries.AddRange(liststrLibraries);
+            
+            // macOS system libraries (no anl on macOS)
+            PublicSystemLibraries.AddRange(
+                new string[] {
+                    "c++",
+                    "pthread",
+                }
+            );
+
+            // macOS frameworks
+            PublicFrameworks.AddRange(
+                new string[] {
+                    "Foundation",
+                    "Security",
+                    "CoreFoundation",
+                }
+            );
+        }
         else
         {
+            // Linux platform
             List<string> liststrLibraries = new List<string> {
                     PluginDirectory + "/SimLibs/core_sim/" + buildType + "/libcore_sim.a",
                     PluginDirectory + "/SimLibs/simserver/" + buildType + "/libsimserver.a",
