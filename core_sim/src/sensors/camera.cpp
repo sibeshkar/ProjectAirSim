@@ -18,7 +18,11 @@
 #include "json.hpp"
 #include "onnxruntime_cxx_api.h"
 #include "sensor_impl.hpp"
+#if defined(__APPLE__)
+#include "coreml_provider_factory.h"
+#else
 #include "tensorrt_provider_factory.h"
+#endif
 
 namespace microsoft {
 namespace projectairsim {
@@ -572,18 +576,31 @@ std::vector<uint8_t> Camera::Impl::RunOnnxModelOnImages(ImageMessage imgMsg) {
   try {
     if (!camera_settings.post_process_model_settings.session_initialized) {
       logger_.LogVerbose(name_, "[%s] Entered onnx section'.", id_.c_str());
+#if defined(__APPLE__)
+      // On Apple Silicon, use CoreML execution provider if requested
+      if (camera_settings.post_process_model_settings.execution_provider ==
+          "coreml") {
+        logger_.LogVerbose(name_, "Trying to add CoreML EP since it is enabled.");
+        OrtSessionOptionsAppendExecutionProvider_CoreML(onnx_.session_options, 0);
+        logger_.LogVerbose(name_, "onnx CoreML session declared");
+      }
+      // CPU provider is always available as fallback on macOS
+#else
+      // On Linux/Windows, use CUDA or TensorRT
       if (camera_settings.post_process_model_settings.execution_provider ==
           "cuda") {
         logger_.LogVerbose(name_, "Trying to add CUDA EP since it is enabled.");
         OrtSessionOptionsAppendExecutionProvider_CUDA(onnx_.session_options, 0);
         logger_.LogVerbose(name_, "onnx CUDA session declared");
-      } else if (camera_settings.post_process_model_settings
+      }
+      else if (camera_settings.post_process_model_settings
                      .execution_provider == "tensorrt") {
         OrtSessionOptionsAppendExecutionProvider_Tensorrt(onnx_.session_options,
                                                           0);
         OrtSessionOptionsAppendExecutionProvider_CUDA(onnx_.session_options, 0);
         logger_.LogVerbose(name_, "onnx TensorRT session declared");
       }
+#endif
       logger_.LogVerbose(name_, "onnx Creating session");
       auto model_file = camera_settings.post_process_model_settings.filepath;
 
@@ -641,9 +658,12 @@ std::vector<uint8_t> Camera::Impl::RunOnnxModelOnImages(ImageMessage imgMsg) {
       throw Error("Invalid onnx allocator when trying to run model on image.");
     }
 
-    const char* input_names[] = {onnx_.session.GetInputName(0, *allocator_ptr)};
-    const char* output_names[] = {
-        onnx_.session.GetOutputName(0, *allocator_ptr)};
+    // Use newer ONNX Runtime API (GetInputNameAllocated/GetOutputNameAllocated)
+    // which returns AllocatedStringPtr instead of raw char*
+    auto input_name_ptr = onnx_.session.GetInputNameAllocated(0, *allocator_ptr);
+    auto output_name_ptr = onnx_.session.GetOutputNameAllocated(0, *allocator_ptr);
+    const char* input_names[] = {input_name_ptr.get()};
+    const char* output_names[] = {output_name_ptr.get()};
 
     input_tensor = Ort::Value::CreateTensor<float>(
         onnx_.memory_info, input.data(), input.size(), input_shape.data(),

@@ -171,6 +171,16 @@ if(WIN32)
 else()
     set(ASSIMP_LIBRARY_SUFFIX_OVERRIDE "")
 endif()
+# On macOS, use system zlib to avoid bundled zlib compatibility issues with modern Xcode
+# Also disable warnings-as-errors due to deprecation warnings with modern Xcode SDK
+if(APPLE)
+    set(ASSIMP_BUILD_ZLIB_OPTION "-DASSIMP_BUILD_ZLIB=OFF")
+    set(ASSIMP_WARNINGS_AS_ERRORS_OPTION "-DASSIMP_WARNINGS_AS_ERRORS=OFF")
+else()
+    # Force build of assimp's packaged zlib in case it detects it existing in a python environment
+    set(ASSIMP_BUILD_ZLIB_OPTION "-DASSIMP_BUILD_ZLIB=ON")
+    set(ASSIMP_WARNINGS_AS_ERRORS_OPTION "")
+endif()
 ExternalProject_Add(assimp-external
     GIT_REPOSITORY          https://github.com/assimp/assimp.git
     GIT_TAG                 v5.2.5
@@ -191,7 +201,8 @@ ExternalProject_Add(assimp-external
         -DCMAKE_CXX_FLAGS=${CMAKE_CXX_FLAGS}
         -DCMAKE_POSITION_INDEPENDENT_CODE=True
         -DBUILD_SHARED_LIBS=OFF
-        -DASSIMP_BUILD_ZLIB=ON  # force build of assimp's packaged zlib in case it detects it existing in a python environment
+        ${ASSIMP_BUILD_ZLIB_OPTION}
+        ${ASSIMP_WARNINGS_AS_ERRORS_OPTION}
         -DASSIMP_BUILD_TESTS=OFF
         -DASSIMP_BUILD_ASSIMP_TOOLS=OFF
         ${ASSIMP_LIBRARY_SUFFIX_OVERRIDE}
