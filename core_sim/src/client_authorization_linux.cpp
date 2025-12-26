@@ -3,14 +3,19 @@
 
 // MIT License. All rights reserved.
 
-#ifdef __linux__
+#if defined(__linux__) || defined(__APPLE__)
 
 #warning Setting OPENSSL to v1.1.0 compatibility mode--upgrade to v3 mode when possible
 #define OPENSSL_API_COMPAT 0x10100000L
 
 #include <arpa/inet.h>
 #include <assert.h>
+#if defined(__APPLE__)
+#include <libkern/OSByteOrder.h>
+#define bswap_64(x) OSSwapInt64(x)
+#else
 #include <byteswap.h>
+#endif
 #include <openssl/bio.h>
 #include <openssl/bn.h>
 #include <openssl/engine.h>
@@ -476,4 +481,4 @@ uint64_t ImplLinux::SetToken(const char* rgch, size_t cch) {
 }  // namespace projectairsim
 }  // namespace microsoft
 
-#endif  //__linux__
+#endif  // defined(__linux__) || defined(__APPLE__)
