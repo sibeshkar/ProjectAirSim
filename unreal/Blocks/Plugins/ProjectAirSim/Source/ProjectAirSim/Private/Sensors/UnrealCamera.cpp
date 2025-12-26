@@ -150,11 +150,11 @@ void UUnrealCamera::LoadCameraMaterials() {
 void HideDebugDrawComponent(USceneCaptureComponent2D* CaptureComponent,
                             UWorld* UnrealWorld) {
   CaptureComponent->HideComponent(
-      Cast<UPrimitiveComponent>(UnrealWorld->LineBatcher));
+      UnrealWorld->GetLineBatcher(UWorld::ELineBatcherType::World));
   CaptureComponent->HideComponent(
-      Cast<UPrimitiveComponent>(UnrealWorld->PersistentLineBatcher));
+      UnrealWorld->GetLineBatcher(UWorld::ELineBatcherType::WorldPersistent));
   CaptureComponent->HideComponent(
-      Cast<UPrimitiveComponent>(UnrealWorld->ForegroundLineBatcher));
+      UnrealWorld->GetLineBatcher(UWorld::ELineBatcherType::Foreground));
 }
 
 void UUnrealCamera::CreateComponents() {
@@ -918,7 +918,7 @@ void UUnrealCamera::OnRendered(
         FTextureRenderTargetResource* RtResource =
             CaptureComponent->TextureTarget->GetRenderTargetResource();
         if (RtResource) {
-          FRHITexture2D* Texture = RtResource->GetRenderTargetTexture();
+          FRHITexture* Texture = RtResource->GetRenderTargetTexture();
           // Copy pixel values out of Unreal's RHI
           UnrealCameraRenderRequest::RenderResult ImageResult;
           auto bIsDepthImage =

@@ -12,8 +12,8 @@
 #include "Runtime/RenderCore/Public/RenderGraphResources.h"
 
 // FScreenPassTextureViewportParameters and FScreenPassTextureInput
-#include "Runtime/Renderer/Private/ScreenPass.h"
-#include "Runtime/Renderer/Private/SceneTextureParameters.h"
+#include "ScreenPass.h"
+#include "SceneTextureParameters.h"
 
 BEGIN_SHADER_PARAMETER_STRUCT(FLidarIntensityShaderInputParameters, )
   SHADER_PARAMETER_STRUCT_REF(FViewUniformShaderParameters, View)

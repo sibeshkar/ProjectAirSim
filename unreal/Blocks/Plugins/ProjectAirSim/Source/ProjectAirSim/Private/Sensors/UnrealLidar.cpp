@@ -14,7 +14,9 @@
 #include "ProjectAirSim.h"
 #include "Runtime/Core/Public/Async/ParallelFor.h"
 #include "Runtime/Engine/Classes/Kismet/KismetMathLibrary.h"
+#include "UnrealHelpers.h"
 #include "UnrealLogger.h"
+#include "UnrealTransforms.h"
 
 namespace projectairsim = microsoft::projectairsim;
 
