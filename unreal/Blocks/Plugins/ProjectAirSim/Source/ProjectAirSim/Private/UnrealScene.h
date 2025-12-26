@@ -32,8 +32,6 @@ class AUnrealScene : public AActor {
 
  public:
   explicit AUnrealScene(const FObjectInitializer& ObjectInitialize);
-  ~AUnrealScene();  // Required for unique_ptr<WorldSimApi> with forward declaration
-
   void LoadUnrealScene(
       UWorld* World, microsoft::projectairsim::Scene& Scene,
       const std::unordered_map<std::string,
@@ -120,7 +118,7 @@ class AUnrealScene : public AActor {
   TimeNano unreal_time;
   bool using_unreal_physics;
 
-  std::unique_ptr<WorldSimApi> world_api;
+  TSharedPtr<WorldSimApi> world_api;  // TSharedPtr handles incomplete types via type erasure
   std::shared_ptr<TimeOfDay> time_of_day;
   std::vector<std::string> objects_;
 

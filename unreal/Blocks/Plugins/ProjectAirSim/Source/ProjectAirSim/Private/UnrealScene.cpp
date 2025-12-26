@@ -27,9 +27,6 @@
 
 namespace projectairsim = microsoft::projectairsim;
 
-// Destructor must be defined in .cpp where WorldSimApi is complete (for unique_ptr)
-AUnrealScene::~AUnrealScene() = default;
-
 AUnrealScene::AUnrealScene(const FObjectInitializer& ObjectInitialize)
     : AActor(ObjectInitialize) {
   PrimaryActorTick.bCanEverTick = true;
