@@ -19,6 +19,13 @@
 #elif defined(__linux__)
 
 #include <arpa/inet.h>
+#include <endian.h>
+
+#elif defined(__APPLE__)
+
+#include <arpa/inet.h>
+#include <libkern/OSByteOrder.h>
+#define be64toh(x) OSSwapBigToHostInt64(x)
 
 #endif
 

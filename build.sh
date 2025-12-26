@@ -4,4 +4,10 @@
 # MIT License.
 
 set -e
-make -f build_linux.mk $1
+
+# Detect platform and use appropriate makefile
+if [[ "$(uname)" == "Darwin" ]]; then
+    make -f build_macos.mk $1
+else
+    make -f build_linux.mk $1
+fi

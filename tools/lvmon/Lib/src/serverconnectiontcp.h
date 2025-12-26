@@ -23,6 +23,14 @@
 #include <Windows.h>
 #endif  //_WIN32
 
+#if defined(__linux__) || defined(__APPLE__)
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <unistd.h>
+#include <errno.h>
+#endif  // __linux__ || __APPLE__
+
 #ifdef __linux__
 #include <sys/signalfd.h>
 #endif  //__linux__
@@ -41,9 +49,9 @@ class CServerConnectionTCP : public IServerConnection {
   virtual void Stop(void) override;
 
  protected:
-#ifdef __linux__
+#if defined(__linux__) || defined(__APPLE__)
   typedef int SOCKET;
-#endif  //__linux__
+#endif  // __linux__ || __APPLE__
 
   typedef int Err;  // Error code
 
@@ -126,10 +134,10 @@ class CServerConnectionTCP : public IServerConnection {
 #ifdef _WIN32
     HANDLE hEventEvent_;  // Event has been queued to m_queueevent
 #endif                    //_WIN32
-#ifdef __linux__
+#if defined(__linux__) || defined(__APPLE__)
     int fdEventReceive_;  // File descriptor for receiving event signals
     int fdEventSend_;     // File descriptor for sending event signals
-#endif                    //__linux__
+#endif                    // __linux__ || __APPLE__
   };                      // class CThreadTCS
 
   typedef unsigned int WaitResult;  // Return values from WaitForEvent()
@@ -169,6 +177,16 @@ class CServerConnectionTCP : public IServerConnection {
   static const int kErrConnReset =
       ECONNRESET;  // errno code for "connect has been reset"
 #endif             //__linux__
+
+#ifdef __APPLE__
+  static const SOCKET kSocketInvalid = -1;  // Invalid socket value
+  static const int NO_ERROR = 0;            // No error code
+  static const int kErrWouldBlock =
+      EWOULDBLOCK;  // errno code for "socket is non-blocking and call can't
+                    // proceed"
+  static const int kErrConnReset =
+      ECONNRESET;  // errno code for "connect has been reset"
+#endif             //__APPLE__
 
  protected:
   static void CloseSocket(SOCKET* psocket);

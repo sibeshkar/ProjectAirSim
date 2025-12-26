@@ -2,5 +2,15 @@
   {
     "name": "Unreal Linux Toolchain",
     "toolchainFile": "unreal-linux-toolchain.cmake"
+  },
+  {
+    "name": "macOS AppleClang (ARM64)",
+    "compilers": {
+      "C": "/usr/bin/clang",
+      "CXX": "/usr/bin/clang++"
+    },
+    "preferredGenerator": {
+      "name": "Ninja"
+    }
   }
 ]

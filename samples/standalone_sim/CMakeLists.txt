@@ -32,6 +32,16 @@ if(WIN32)
         multirotor_api
         rendering_scene
     )
+elseif(APPLE)
+    add_dependencies(
+        ${TARGET_NAME}
+        simserver
+        core_sim
+        nng-external
+        physics
+        multirotor_api
+        rendering_scene
+    )
 else()
     add_dependencies(
         ${TARGET_NAME}

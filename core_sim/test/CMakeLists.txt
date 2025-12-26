@@ -59,6 +59,8 @@ set_target_properties(
 
 if(WIN32)
     add_dependencies(${TARGET_NAME} core_sim nng-external gtest_main)
+elseif(APPLE)
+    add_dependencies(${TARGET_NAME} core_sim nng-external gtest_main)
 else()
     add_dependencies(${TARGET_NAME} core_sim nng-external openssl-external gtest_main)
 endif()

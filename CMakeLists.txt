@@ -24,7 +24,8 @@ set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreadedDLL")  # Have to match UE (uses /MD
 include(FetchContent)
 include(ExternalProject)
 
-if (UNIX)
+if (UNIX AND NOT APPLE)
+    # Linux
     if(DEFINED ENV{UE_ROOT})
         # Build/link against UE's packaged Linux toolchain instead of system-installed toolchain
         # Note: This must be set BEFORE `project()` is called
@@ -36,6 +37,9 @@ if (UNIX)
         set(CMAKE_C_COMPILER clang-13)
         set(CMAKE_CXX_COMPILER clang++-13)
     endif()
+elseif(APPLE)
+    # macOS - use system AppleClang (auto-detected by CMake)
+    message("Building for macOS with system AppleClang")
 endif()
 
 # Set up project
@@ -64,7 +68,8 @@ if(WIN32)
     # Disable manifest generation for executables to avoid build failures due to Windows write
     # permission issues (possibly from file locks by antivirus or other OS file protection)
     add_link_options(/MANIFEST:NO)
-elseif(UNIX)
+elseif(UNIX AND NOT APPLE)
+    # Linux
     add_compile_definitions(__CLANG__)
     add_compile_options(-stdlib=libc++ -ferror-limit=10)
     # Note: Linking -lanl (for getaddrinfo) and -pthread are required because of nng
@@ -73,6 +78,11 @@ elseif(UNIX)
     # set(CESIUM_CXX_FLAGS "-std=c++17 -stdlib=libc++")
     # set(CESIUM_LINKER_FLAGS "-stdlib=libc++ -lc++abi")
     # set(CESIUM_LINUX_TOOLCHAIN ${UE_CESIUM_PLUGIN_DIR}/extern/unreal-linux-toolchain.cmake)
+elseif(APPLE)
+    # macOS - no -lanl (Linux-specific), libc++ is default on macOS
+    add_compile_definitions(__CLANG__)
+    add_compile_options(-ferror-limit=10)
+    add_link_options(-pthread)
 endif()
 
 
@@ -277,7 +287,8 @@ if(NOT tinygltf_POPULATED)
     # Note: tinygltf is only used internally by sim libs, so no need to package it with other sim libs
 endif()
 
-if(UNIX)
+if(UNIX AND NOT APPLE)
+    # Linux - build OpenSSL from source
     # Set up dependency: openssl
     message("Setting up [openssl] dependency as an external project...")
     # CMake external projects don't adopt the parent's CMAKE_MSVC_RUNTIME_LIBRARY setting,
@@ -307,23 +318,71 @@ if(UNIX)
         COMMAND ${CMAKE_COMMAND} -E remove_directory "${UE_PLUGIN_SIMLIBS_DIR}/openssl/$<IF:$<CONFIG:Release>,Release,Debug>/pkgconfig"
         DEPENDEES install
     )
+elseif(APPLE)
+    # macOS - use Homebrew OpenSSL
+    message("Using Homebrew OpenSSL for macOS...")
+    execute_process(
+        COMMAND brew --prefix openssl@3
+        OUTPUT_VARIABLE HOMEBREW_OPENSSL_PREFIX
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+        RESULT_VARIABLE BREW_RESULT
+    )
+    if(NOT BREW_RESULT EQUAL 0)
+        message(FATAL_ERROR "Could not find Homebrew OpenSSL. Please run: brew install openssl@3")
+    endif()
+    set(OPENSSL_LIB_DIR "${HOMEBREW_OPENSSL_PREFIX}/lib")
+    set(OPENSSL_INCLUDE_DIR "${HOMEBREW_OPENSSL_PREFIX}/include")
+    message("OPENSSL_LIB_DIR set to ${OPENSSL_LIB_DIR}")
+    message("OPENSSL_INCLUDE_DIR set to ${OPENSSL_INCLUDE_DIR}")
+    
+    # Package OpenSSL for UE plugin (copy dylibs and headers)
+    file(MAKE_DIRECTORY "${UE_PLUGIN_SIMLIBS_DIR}/openssl/Release")
+    file(MAKE_DIRECTORY "${UE_PLUGIN_SIMLIBS_DIR}/openssl/Debug")
+    file(MAKE_DIRECTORY "${UE_PLUGIN_SIMLIBS_DIR}/openssl/include")
+    file(GLOB OPENSSL_DYLIBS "${OPENSSL_LIB_DIR}/*.dylib")
+    file(GLOB OPENSSL_STATIC_LIBS "${OPENSSL_LIB_DIR}/*.a")
+    file(COPY ${OPENSSL_DYLIBS} DESTINATION "${UE_PLUGIN_SIMLIBS_DIR}/openssl/Release")
+    file(COPY ${OPENSSL_DYLIBS} DESTINATION "${UE_PLUGIN_SIMLIBS_DIR}/openssl/Debug")
+    file(COPY ${OPENSSL_STATIC_LIBS} DESTINATION "${UE_PLUGIN_SIMLIBS_DIR}/openssl/Release")
+    file(COPY ${OPENSSL_STATIC_LIBS} DESTINATION "${UE_PLUGIN_SIMLIBS_DIR}/openssl/Debug")
+    file(COPY "${OPENSSL_INCLUDE_DIR}/openssl" DESTINATION "${UE_PLUGIN_SIMLIBS_DIR}/openssl/include")
 endif()
 
-if(UNIX)
+if(UNIX AND NOT APPLE)
+    # Linux x64 with GPU (CUDA/TensorRT)
     set(onnx_url https://github.com/microsoft/onnxruntime/releases/download/v1.12.1/onnxruntime-linux-x64-gpu-1.12.1.tgz)
     set(onnx_hash MD5=27adfa51648d2713608f35c3c6957a4f)
+    set(ONNX_USE_GPU TRUE)
+elseif(APPLE)
+    # macOS ARM64 (CPU only - no CUDA/TensorRT on macOS)
+    set(onnx_url https://github.com/microsoft/onnxruntime/releases/download/v1.19.0/onnxruntime-osx-arm64-1.19.0.tgz)
+    set(onnx_hash "")  # Skip hash check for now
+    set(ONNX_USE_GPU FALSE)
 else()
+    # Windows x64 with GPU
     set(onnx_url https://github.com/microsoft/onnxruntime/releases/download/v1.12.1/onnxruntime-win-x64-gpu-1.12.1.zip)
     set(onnx_hash MD5=dd6d6ba7aaaa58dd9ef8528dfcb822d2)
+    set(ONNX_USE_GPU TRUE)
 endif()
 
-FetchContent_Declare(
-    onnxruntime
-    URL                  ${onnx_url}
-    URL_HASH             ${onnx_hash} # from PowerShell: CertUtil -hashfile json.hpp MD5
-    DOWNLOAD_NO_PROGRESS True
-    DOWNLOAD_DIR         ${CMAKE_BINARY_DIR}/_deps/onnxruntime-download
-)
+# FetchContent for ONNX Runtime - handle optional hash
+if(onnx_hash)
+    FetchContent_Declare(
+        onnxruntime
+        URL                  ${onnx_url}
+        URL_HASH             ${onnx_hash}
+        DOWNLOAD_NO_PROGRESS True
+        DOWNLOAD_DIR         ${CMAKE_BINARY_DIR}/_deps/onnxruntime-download
+    )
+else()
+    # macOS: skip hash check
+    FetchContent_Declare(
+        onnxruntime
+        URL                  ${onnx_url}
+        DOWNLOAD_NO_PROGRESS True
+        DOWNLOAD_DIR         ${CMAKE_BINARY_DIR}/_deps/onnxruntime-download
+    )
+endif()
 FetchContent_GetProperties(onnxruntime)
 
 if(NOT onnxruntime_POPULATED)
@@ -336,13 +395,21 @@ if(NOT onnxruntime_POPULATED)
 
     message("Packaging [onnxruntime] to ${UE_PLUGIN_SIMLIBS_DIR}/shared_libs")
     file(COPY "${ONNX_INCLUDE_DIR}" DESTINATION "${UE_PLUGIN_SIMLIBS_DIR}/shared_libs/onnxruntime")
-    file(COPY "${ONNX_LIB_DIR}" DESTINATION "${UE_PLUGIN_SIMLIBS_DIR}/shared_libs" FILES_MATCHING PATTERN "*onn*.dll" PATTERN "*onn*.lib" PATTERN "*.so*")
+    if(APPLE)
+        # macOS: copy dylib files
+        file(COPY "${ONNX_LIB_DIR}" DESTINATION "${UE_PLUGIN_SIMLIBS_DIR}/shared_libs" FILES_MATCHING PATTERN "*.dylib")
+        file(COPY "${ONNX_LIB_DIR}/" DESTINATION "${UNITY_WRAPPER_DLL_DIR}/" FILES_MATCHING PATTERN "*.dylib")
+    else()
+        file(COPY "${ONNX_LIB_DIR}" DESTINATION "${UE_PLUGIN_SIMLIBS_DIR}/shared_libs" FILES_MATCHING PATTERN "*onn*.dll" PATTERN "*onn*.lib" PATTERN "*.so*")
+        message("Packaging [onnxruntime] to ${UNITY_WRAPPER_DLL_DIR}")
+        file(COPY "${ONNX_LIB_DIR}/" DESTINATION "${UNITY_WRAPPER_DLL_DIR}/" FILES_MATCHING PATTERN "*onn*.dll" PATTERN "*onn*.lib" PATTERN "*.so*")
+    endif()
 
-    message("Packaging [onnxruntime] to ${UNITY_WRAPPER_DLL_DIR}")
-    file(COPY "${ONNX_LIB_DIR}/" DESTINATION "${UNITY_WRAPPER_DLL_DIR}/" FILES_MATCHING PATTERN "*onn*.dll" PATTERN "*onn*.lib" PATTERN "*.so*")
-
-    add_definitions(-DUSE_CUDA)
-    add_definitions(-DUSE_TENSORRT)
+    # Only define CUDA/TensorRT for GPU builds (Linux/Windows)
+    if(ONNX_USE_GPU)
+        add_definitions(-DUSE_CUDA)
+        add_definitions(-DUSE_TENSORRT)
+    endif()
 endif()
 
 # if(WIN32)

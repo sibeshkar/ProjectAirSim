@@ -23,7 +23,7 @@ add_library(
     sim_unity_wrapper.cpp
 )
 
-if(NOT WIN32)
+if(UNIX AND NOT APPLE)
     set(DEP_OPENSSL openssl-external)
 endif()
 add_dependencies(

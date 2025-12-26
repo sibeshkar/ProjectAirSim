@@ -21,6 +21,14 @@
 #include <unistd.h>
 #endif  //__linux__
 
+#ifdef __APPLE__
+#include <arpa/inet.h>
+#include <fcntl.h>
+#include <signal.h>
+#include <time.h>
+#include <unistd.h>
+#endif  //__APPLE__
+
 namespace {
 
 void DebugPrint(const char* szFmt, ...) {
@@ -917,12 +925,12 @@ CServerConnectionTCP::CThreadTCS::CThreadTCS(void)
 #ifdef _WIN32
       hEventEvent_(CreateEvent(NULL, FALSE, FALSE, NULL))
 #endif  // _WIN32
-#ifdef __linux__
+#if defined(__linux__) || defined(__APPLE__)
           fdEventReceive_(-1),
       fdEventSend_(-1)
-#endif  // __linux__
+#endif  // __linux__ || __APPLE__
 {
-#ifdef __linux__
+#if defined(__linux__)
   int rgfd[2];
 
   if (pipe2(rgfd, O_NONBLOCK) == 0) {
@@ -932,6 +940,19 @@ CServerConnectionTCP::CThreadTCS::CThreadTCS(void)
     DebugPrint("******pipe() failed, errno = %d", errno);
   }
 #endif  //__linux__
+#if defined(__APPLE__)
+  int rgfd[2];
+
+  if (pipe(rgfd) == 0) {
+    // Set non-blocking on macOS
+    fcntl(rgfd[0], F_SETFL, O_NONBLOCK);
+    fcntl(rgfd[1], F_SETFL, O_NONBLOCK);
+    fdEventReceive_ = rgfd[0];
+    fdEventSend_ = rgfd[1];
+  } else {
+    DebugPrint("******pipe() failed, errno = %d", errno);
+  }
+#endif  //__APPLE__
 }
 
 CServerConnectionTCP::CThreadTCS::~CThreadTCS() {
@@ -940,10 +961,10 @@ CServerConnectionTCP::CThreadTCS::~CThreadTCS() {
 #ifdef _WIN32
   if (hEventEvent_ != NULL) CloseHandle(hEventEvent_);
 #endif  // _WIN32
-#ifdef __linux__
+#if defined(__linux__) || defined(__APPLE__)
   if (fdEventSend_ >= 0) close(fdEventSend_);
   if (fdEventReceive_ >= 0) close(fdEventReceive_);
-#endif  // __linux__
+#endif  // __linux__ || __APPLE__
 }
 
 void CServerConnectionTCP::CThreadTCS::SendEvent(Event event) {
